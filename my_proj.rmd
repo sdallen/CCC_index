@@ -1,0 +1,86 @@
+---
+title: "RRproject"
+author: "Shanae Allen-Moran"
+date: "Tuesday, November 25, 2014"
+output: html_document
+bibliography: proj.bib
+---
+```{r, include=FALSE}
+library(knitr)
+
+
+source( "datcleannew.r" )
+cpuedat <- datcleannew()$cpuedat
+dat <- datcleannew()$dat
+
+```
+
+My Reproducible Research class project is to analyze genetic stock identification (GSI) data that was collected from commercial fishing vessels off the coast of CA and OR from 2010 - 2013. Specifically I want to standardize catch per hour fished (CPUE) of California Coastal Chinook (CCC) in order to obtain an index of abundance. We cannot currently assess absolute abundance of this stock using traditional methods (i.e., cohort reconstruction) because we do not have escapement data, nor do we have catch estimates for all fished strata (e.g., recreational and commercial catch of CCC). 
+
+In order to obtain an index of abundance from CPUE data, we have to standardize CPUE to account for factors that may cause the catchability of this stock to vary over time; factors such as the mismatch between stock distribution and fishing effort, and differences in the ability of fisherman to find and catch CCC. 
+
+Graphs of the data are presented that illustrate the distribution of CPUE and how CPUE varies over time and space. First, the distribution of log(CPUE + .001) illustrates that CPUE is zero inflated to a high degree but is lognormal-ish for positive values and highly variable. 
+
+```{r, echo=FALSE}
+
+ # plot log transformed
+  dlog <- ggplot(data = cpuedat, aes(x = log(Cperhr + .001))) + geom_histogram( ) #binwidth = 2, #fill = "blue"
+  dlog
+
+```
+
+
+To further analzye the variability of CPUE, the following graphs illustrate how CPUE varies over time and space. I first plot CPUE vs average latitude per day (avglatday) such that each point is CPUE for a particular vessel for all time. I then plot the relationship stratified by month and year. The solid line indicates where the Eel River is located, which is the largest river in the CCC Evolutionarily Significant Unit (ESU). The following plots indicate average CPUE increases just south of the mouth of this river, and as the spawning season begins (~July). 
+
+```{r, echo=FALSE}
+
+
+# all months
+  d <- ggplot(data = cpuedat, aes(y = avglatday, x=Cperhr)) + geom_point()
+  
+# add line of where eel river is
+
+  d + geom_hline(yintercept=40.636)
+
+
+# per month and year
+
+  d + geom_hline(yintercept=40.636) + facet_wrap( ~ myfac)
+
+
+```
+
+
+CPUE is also plotted vs average longitude per day (avglonday) and the longitude of the mouth of the Eel river is indicated by the vertical line. CPUE tends to be highest just east/inshore of the river mouth. 
+
+
+```{r, echo=FALSE}
+
+
+
+# ==============================================================================
+# Plot Cperhr on y axis and longitude on x axis 
+# ==============================================================================\
+
+
+# all months
+  d <- ggplot(data = cpuedat, aes(y = Cperhr, x=avglonday)) + geom_point()
+  
+# add line of where eel river is
+
+  d + geom_vline(xintercept = -124.31)
+
+# per month
+
+  d + geom_vline(xintercept = -124.31) + facet_wrap( ~ myfac)
+
+```
+
+
+To standardize CPUE, I follow methods in [@lynch2012] using a delta-GLM (delta-GAM in our case) approach. 
+
+
+# References
+
+
+
