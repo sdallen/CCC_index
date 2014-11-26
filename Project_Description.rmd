@@ -78,7 +78,7 @@ CPUE is also plotted vs average longitude per day (avglonday) and the longitude 
 
 
 To standardize CPUE, I follow methods in [@lynch2012] using a delta-GLM (delta-GAM in this case) approach. 
-
+...To be continued
 
 # References
 
