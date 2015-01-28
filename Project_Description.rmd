@@ -1,5 +1,5 @@
 ---
-title: "RRproject"
+title: "RRproject: CA Coastal Chinook index of abundance"
 author: "Shanae Allen-Moran"
 date: "Tuesday, November 25, 2014"
 output: html_document
@@ -7,19 +7,19 @@ bibliography: proj.bib
 ---
 ```{r, include=FALSE}
 library(knitr)
-
-
+library(mgcv) #for GAMs
 source( "datcleannew.r" )
 cpuedat <- datcleannew()$cpuedat
 dat <- datcleannew()$dat
 
 ```
 
-My Reproducible Research class project is to analyze genetic stock identification (GSI) data that was collected from commercial fishing vessels off the coast of CA and OR from 2010 - 2013. Specifically I want to standardize catch per hour fished (CPUE) of California Coastal Chinook (CCC) in order to obtain an index of abundance. We cannot currently assess absolute abundance of this stock using traditional methods (i.e., cohort reconstruction) because we do not have escapement data, nor do we have catch estimates for all fished strata (e.g., recreational and commercial catch of CCC). 
+My Reproducible Research class project is to analyze genetic stock identification (GSI) data collected from commercial fishing vessels off the coast of CA and OR from 2010 - 2013. Specifically I standardized average catch per hour fished (CPUE) of California Coastal Chinook (CCC) in order to obtain an index of abundance. We cannot currently assess absolute abundance of this stock using traditional methods (i.e., cohort reconstruction) because we do not have escapement data, nor do we have catch estimates for all fished strata (e.g., coastwide recreational and commercial catch of CCC). 
 
 In order to obtain an index of abundance from CPUE data, we have to standardize CPUE to account for factors that may cause the catchability of this stock to vary over time; factors such as the mismatch between stock distribution and fishing effort, and differences in the ability of fisherman to find and catch CCC. 
 
-Graphs of the data are presented that illustrate the distribution of CPUE and how CPUE varies over time and space. First, the distribution of log(CPUE + .001) illustrates that CPUE is zero inflated to a high degree but is lognormal-ish for positive values and highly variable. 
+For each vessel and day, CPUE is defined as the average catch of CCC per hour spent actively catching fish. I confirmed that explanatory variables such as latitude and longitude did not vary appreciably per hour and used average lat/lon per day as nonlinear effects. Graphs of the data are presented that illustrate the distribution of CPUE and how CPUE varies over time and space. First, the distribution of log(CPUE + .001) illustrates that CPUE is zero inflated to a high degree but is lognormal or gamma-ish for positive values and highly variable. 
+
 
 ```{r, echo=FALSE}
 
@@ -77,8 +77,83 @@ CPUE is also plotted vs average longitude per day (avglonday) and the longitude 
 ```
 
 
-To standardize CPUE, I follow methods in [@lynch2012] using a delta-GLM (delta-GAM in this case) approach. 
-...To be continued
+To standardize CPUE, methods presented here are similar to those in [@lynch2012], but instead of a delta-GLM approach, I used a delta-GAM model that incorporates nonlinear spatial effects. I present only the full models for both presence/absence and CPUE given presence. A model selection framework would be essential in selecting the most appropriate model and a cross validation scheme could provide measures of accuracy. 
+
+In this full model, month and year are additive fixed effects, the effect of month varies randomly by year, average daily latitude and longitude are nonlinear effects that vary per month, and a random effect of vessel accounts for differences among fishermen. 
+
+First, to model presence/absence, I assume a quasibinomial distribution as there is much overdispersion, some of which may be explained by schooling behavior. The model summary and diagnostic plot are below. 
+
+```{r, echo=FALSE}
+
+  # Pres abs response variable
+
+  cpuedat$presabs = 0
+
+  cpuedat$presabs[ cpuedat$Cperhr >0 ] <- 1
+  colnames(cpuedat)
+
+  # using month and year interaction, lat and month interaction, and lon and month interaction
+  pres.qbgam <- gam( presabs ~ mfac + yfac + s(yfac, mfac, bs="re")+ s(avglatday, by=mfac) + s(avglonday, by=mfac) +  s(vessel_id, bs="re"), 
+                 family="quasibinomial", data=cpuedat)
+
+  summary(pres.qbgam)
+
+  gam.check(pres.qbgam, pch=19)
+```
+
+The same explanatory variables are included in a full model of CPUE given presence, but I use a gamma distribution of errors. Here is a model summary followed by a diagnostic plot.  
+
+```{r, echo=FALSE}
+
+#try gamma distribution
+# using month and year interaction, lat and month interaction, and lon and month interaction
+cpue.ggam <- gam( Cperhr ~ mfac + yfac + s(yfac, mfac, bs="re") + s(avglatday, by=mfac) + s(avglonday, by=mfac) +  s(vessel_id, bs="re"), 
+                  data=cpuedat[cpuedat$presabs ==1, ], family = Gamma(link = "log")) 
+
+summary(cpue.ggam )
+gam.check(cpue.ggam, pch=19)  #, cex=.3)
+
+
+```
+
+Lastly, to obtain a time series of abundance indices, year effects are extracted from both models and multiplied (after applying a bias correction).  The plot of estimated indices is below, but of course estimates of standard errors are vital to interpreting these results and are likely to be substantial.
+
+
+```{r, echo=FALSE}
+#################################################################################
+# extract year effect to obtain index of abundance
+
+
+
+param.names.pres <- names(coef(pres.qbgam))  
+param.ind.pres <- seq(1, length(param.names.pres))
+yr.coef.pres <- coef(pres.qbgam)[param.ind.pres[ substr(param.names.pres, 1, 4) %in% "yfac"] ]
+
+
+# annual estimates of relative abundance and standard errors - back transform year means with an infinite series lognormal bias correction as in Lo et al (1992)
+
+param.names <- names(coef(cpue.ggam))	
+param.ind <- seq(1, length(param.names))
+yr.coef <- coef(cpue.ggam)[param.ind[ substr(param.names, 1, 4) %in% "yfac"] ]
+
+# bias correction
+b <- sum( (cpue.ggam$residuals)^2)/cpue.ggam$df.residual
+
+
+# final index of abundance estimate
+
+index <- c( 0, yr.coef.pres*yr.coef*b )
+
+names(index) <- as.character( seq(2010, 2013) )
+
+
+
+plot( names(index), index, type="b", pch=16, ylim=c(-.5, .5), xlab="Year", ylab="Index", xaxt="n" )
+axis( 1, at = names(index), labels=names(index))
+abline(h=0, lty=2)
+```
+
+
 
 # References
 
