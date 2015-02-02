@@ -1,5 +1,12 @@
 #This Rcode plots the data and applies models to standardize CPUE
-
+#################################################################################
+#################################################################################
+# This script produces estimates of CA Coastal Chinook (CCC) indices of abundance
+# by standardizing average catch of CCC per hour catching fish
+#################################################################################
+# To Do:
+# Include a covariate of fishery type (e.g., sport, comm nonretention, comm retention)
+#################################################################################
 
 rm(list = ls(all = TRUE))
 
