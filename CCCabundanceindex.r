@@ -13,8 +13,8 @@ rm(list = ls(all = TRUE))
 # ==============================================================================
 # Directories.
 
-Top.dir <-"C:\\Users\\shanae.allen\\Documents\\Courses\\Reproducible Research\\my_proj"
-setwd( Top.dir )
+#Top.dir <-"C:\\Users\\shanae.allen\\Documents\\Courses\\Reproducible Research\\CCC_index"
+#setwd( Top.dir )
 
 # ==============================================================================
 # functions
